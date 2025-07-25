@@ -16,18 +16,23 @@ const TreeNode: React.FC<{
   onRemove: (id: number) => void;
 }> = ({ node, onAdd, onRemove }) => {
   return (
-    <div style={{ marginLeft: 20, marginTop: 10, border: "1px solid #ddd", padding: 10, borderRadius: 5 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <strong>{node.title}</strong>
-        <button onClick={() => onAdd(node.id)} style={{ color: "green" }}>➕</button>
+    <div className="ml-4 mt-5 border-1 border-black p-5">
+      <div className="flex items-center gap-3">
+        <h3>{node.title}</h3>
+        <button onClick={() => onAdd(node.id)}>add</button>
         {node.title !== "Director" && (
-          <button onClick={() => onRemove(node.id)} style={{ color: "red" }}>❌</button>
+          <button onClick={() => onRemove(node.id)}>remove</button>
         )}
       </div>
 
       <div>
         {node.children.map((child) => (
-          <TreeNode key={child.id} node={child} onAdd={onAdd} onRemove={onRemove} />
+          <TreeNode
+            key={child.id}
+            node={child}
+            onAdd={onAdd}
+            onRemove={onRemove}
+          />
         ))}
       </div>
     </div>
@@ -44,7 +49,7 @@ const HomePage: React.FC = () => {
   const addNode = (parentId: number) => {
     const newNode: TreeNodeType = {
       id: idCounter++,
-      title: `Member ${idCounter}`,
+      title: `Subordinator`,
       children: [],
     };
 
@@ -75,10 +80,8 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <main style={{ padding: 20 }}>
-      <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 20 }}>
-        Organizational Structure
-      </h1>
+    <main className="p-5">
+      <h1 className="mb-5">Organizational Structure</h1>
       <TreeNode node={tree} onAdd={addNode} onRemove={removeNode} />
     </main>
   );

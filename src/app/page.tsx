@@ -1,7 +1,10 @@
-import HomePage from "@/components/HomaePage";
+// import HomePage from "@/components/HomaePage";
+
+import Task from "@/components/test";
 
 export default function Home() {
   return (
-    <HomePage />  
+    // <HomePage />  
+    <Task  />
   );
 }
