@@ -51,7 +51,7 @@ const OrgStruc = () => {
   return (
     <div className='p-5'>
         <h1>Organizational; Structure</h1>
-        <div> Director <button onClick={makeSubOrdinate}>...</button></div>
+        <div> Director <button>...</button></div>
     </div>
   )
 }
