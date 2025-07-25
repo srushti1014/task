@@ -1,10 +1,7 @@
-// import HomePage from "@/components/HomaePage";
-
-import Task from "@/components/Test";
+import OrgChart from "@/components/HomaePage";
 
 export default function Home() {
   return (
-    // <HomePage />  
-    <Task  />
+    <OrgChart />
   );
 }
