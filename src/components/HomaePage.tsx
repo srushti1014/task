@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Plus, Minus } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 
 interface Node {
   id: string;
@@ -11,7 +12,8 @@ interface Node {
   type: "director" | "subordinate" | "branch";
 }
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
+// const generateId = () => Math.random().toString(36).substring(2, 9);
+const generateId = () => uuidv4();
 
 const findNodeById = (nodes: Node[], id: string): Node | null => {
   for (const node of nodes) {
@@ -55,52 +57,48 @@ const NodeComponent = ({
   onAddSubordinate: (id: string) => void;
   onRemove: (id: string) => void;
 }) => {
+  const [showMenu, setShowMenu] = useState(false);
   return (
     <div className="">
       {/* Node Box */}
       <div className="border px-5 py-2 w-full">
-        <div 
-        className={`${
-              node.type === "director"
-                ? "w-full flex justify-center gap-3"
-                : "w-full flex justify-between gap-2"
-            } mt-4`}
-        // className="w-full flex justify-between gap-2"
+        <div
+          className={`${
+            node.type === "director"
+              ? "w-full flex justify-center gap-3"
+              : "w-full flex justify-between gap-2"
+          } mt-4`}
+          // className="w-full flex justify-between gap-2"
         >
-          <div className="font-medium mb-1">
-            {node.label}
-
-            {node.type === "subordinate" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddBranchMember(node.id);
-                }}
-                className="h-6 w-6 p-0 text-green-600"
-                title="Add branch member"
-              >
-                <Plus className="w-3 h-3" />
-              </Button>
-            )}
-
-            {node.type !== "director" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove(node.id);
-                }}
-                className="h-6 w-6 p-0 text-red-600"
-                title="Remove"
-              >
-                <Minus className="w-3 h-3" />
-              </Button>
-            )}
+          <div className="flex items-center gap-2 mb-1">
+            <p>{node.label}</p>
+            <div className="flex gap-1">
+              {node.type === "subordinate" && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddBranchMember(node.id);
+                  }}
+                  className="w-4.5 h-4.5  text-white rounded-full flex items-center justify-center bg-green-700"
+                  title="Add branch member"
+                >
+                  <Plus size={13} className="font-extrabold"/>
+                </button>
+              )}
+              {node.type !== "director" && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(node.id);
+                  }}
+                  className="w-4.5 h-4.5 text-white rounded-full flex items-center justify-center bg-red-700"
+                >
+                  <Minus size={13} className="font-extrabold"/>
+                </button>
+              )}
+            </div>
           </div>
-          <Button
+          {/* <Button
             variant="ghost"
             size="sm"
             onClick={(e) => {
@@ -111,7 +109,29 @@ const NodeComponent = ({
             title="Add Subordinate"
           >
             <MoreHorizontal className="w-3 h-3" />
-          </Button>
+          </Button> */}
+          <div className="relative inline-block text-left">
+            <button
+              onClick={() => setShowMenu((prev) => !prev)}
+              className="ml-2"
+            >
+              <MoreHorizontal className="w-3 h-3" />
+            </button>
+            {showMenu && (
+              <div className="absolute left-full top-0 mt-2 w-64 p-2 bg-white border rounded shadow z-10">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddSubordinate(node.id);
+                    setShowMenu(false);
+                  }}
+                  className="text-sm"
+                >
+                  Add a New Subordinate Branch
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         {/* Children */}
         {node.children.length > 0 && (
@@ -224,9 +244,6 @@ const OrgChart = () => {
 
 export default OrgChart;
 
-
-
-
 // const NodeComponent = ({
 //   node,
 //   onAddBranchMember,
@@ -312,13 +329,6 @@ export default OrgChart;
 //     </div>
 //   );
 // };
-
-
-
-
-
-
-
 
 // "use client";
 // import React, { useState } from "react";
