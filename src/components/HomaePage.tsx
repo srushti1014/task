@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Plus, Minus } from "lucide-react";
 
-// -------------------- Types --------------------
 interface Node {
   id: string;
   label: string;
@@ -12,14 +11,7 @@ interface Node {
   type: "director" | "subordinate" | "branch";
 }
 
-// -------------------- Helpers --------------------
 const generateId = () => Math.random().toString(36).substring(2, 9);
-
-const buildLabelPath = (nodes: Node[], parentId: string | null, index: number): string => {
-  if (!parentId) return ""; // Director
-  const parent = findNodeById(nodes, parentId);
-  return parent ? `${parent.label}/${index}` : `${index}`;
-};
 
 const findNodeById = (nodes: Node[], id: string): Node | null => {
   for (const node of nodes) {
@@ -30,7 +22,28 @@ const findNodeById = (nodes: Node[], id: string): Node | null => {
   return null;
 };
 
-// -------------------- Node Component --------------------
+const getNextSubordinateLabel = (parentNode: Node): string => {
+  if (parentNode.type === "director") {
+    const subordinates = parentNode.children.filter(
+      (child) => child.type === "subordinate"
+    );
+    return `Subordinate ${subordinates.length + 1}`;
+  } else {
+    const subordinates = parentNode.children.filter(
+      (child) => child.type === "subordinate"
+    );
+    return `${parentNode.label}/${subordinates.length + 1}`;
+  }
+};
+
+const getNextBranchMemberLabel = (parentNode: Node): string => {
+  const branchMembers = parentNode.children.filter(
+    (child) => child.type === "branch"
+  );
+  const labelPart = parentNode.label.split("Subordinate ").pop();
+  return `Branch member ${labelPart}/${branchMembers.length + 1}`;
+};
+
 const NodeComponent = ({
   node,
   onAddBranchMember,
@@ -43,45 +56,89 @@ const NodeComponent = ({
   onRemove: (id: string) => void;
 }) => {
   return (
-    <div className="border p-2 m-2 rounded bg-white shadow">
-      <div className="flex justify-between items-center">
-        <span className={node.type === "subordinate" ? "font-semibold" : ""}>
-          {node.label}
-        </span>
-        <div className="flex gap-1">
-          {node.type !== "director" && (
-            <Button variant="outline" size="icon" onClick={() => onAddBranchMember(node.id)}>
-              <Plus className="w-4 h-4 text-green-600" />
-            </Button>
-          )}
-          <Button variant="outline" size="icon" onClick={() => onAddSubordinate(node.id)}>
-            <MoreHorizontal className="w-4 h-4 text-gray-600" />
-          </Button>
-          {node.type !== "director" && (
-            <Button variant="outline" size="icon" onClick={() => onRemove(node.id)}>
-              <Minus className="w-4 h-4 text-red-600" />
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="">
+      {/* Node Box */}
+      <div className="border px-5 py-2 w-full">
+        <div 
+        className={`${
+              node.type === "director"
+                ? "w-full flex justify-center gap-3"
+                : "w-full flex justify-between gap-2"
+            } mt-4`}
+        // className="w-full flex justify-between gap-2"
+        >
+          <div className="font-medium mb-1">
+            {node.label}
 
-      {/* Render Children */}
-      <div className="ml-4 border-l border-gray-300 pl-2">
-        {node.children.map((child) => (
-          <NodeComponent
-            key={child.id}
-            node={child}
-            onAddBranchMember={onAddBranchMember}
-            onAddSubordinate={onAddSubordinate}
-            onRemove={onRemove}
-          />
-        ))}
+            {node.type === "subordinate" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddBranchMember(node.id);
+                }}
+                className="h-6 w-6 p-0 text-green-600"
+                title="Add branch member"
+              >
+                <Plus className="w-3 h-3" />
+              </Button>
+            )}
+
+            {node.type !== "director" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(node.id);
+                }}
+                className="h-6 w-6 p-0 text-red-600"
+                title="Remove"
+              >
+                <Minus className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddSubordinate(node.id);
+            }}
+            className="h-6 w-6 p-0"
+            title="Add Subordinate"
+          >
+            <MoreHorizontal className="w-3 h-3" />
+          </Button>
+        </div>
+        {/* Children */}
+        {node.children.length > 0 && (
+          // <div className="grid grid-cols-2 gap-2 mt-4">
+          <div
+            className={`${
+              node.type === "director"
+                ? "grid grid-cols-2 gap-4"
+                : "flex flex-col gap-2"
+            } mt-4`}
+          >
+            {node.children.map((child) => (
+              <NodeComponent
+                key={child.id}
+                node={child}
+                onAddBranchMember={onAddBranchMember}
+                onAddSubordinate={onAddSubordinate}
+                onRemove={onRemove}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-// -------------------- Org Chart Root --------------------
 const OrgChart = () => {
   const [tree, setTree] = useState<Node[]>([
     {
@@ -93,97 +150,64 @@ const OrgChart = () => {
     },
   ]);
 
-  // Add a new subordinate branch (child)
   const addSubordinate = (parentId: string) => {
-    const newNodeId = generateId();
+    setTree((prevTree) => {
+      const newTree = JSON.parse(JSON.stringify(prevTree));
+      const parentNode = findNodeById(newTree, parentId);
 
-    const updateTree = (nodes: Node[]): Node[] =>
-      nodes.map((node) => {
-        if (node.id === parentId) {
-          const count = node.children.length + 1;
-          const label = buildLabelPath(tree, parentId, count);
+      if (!parentNode) return prevTree;
 
-          return {
-            ...node,
-            children: [
-              ...node.children,
-              {
-                id: newNodeId,
-                label: node.type === "director" ? `Subordinate ${count}` : `${label}`,
-                parentId,
-                type: "subordinate",
-                children: [],
-              },
-            ],
-          };
-        }
-        return { ...node, children: updateTree(node.children) };
-      });
+      const newSubordinate: Node = {
+        id: generateId(),
+        label: getNextSubordinateLabel(parentNode),
+        parentId: parentNode.id,
+        type: "subordinate",
+        children: [],
+      };
 
-    setTree(updateTree(tree));
+      parentNode.children.push(newSubordinate);
+      return newTree;
+    });
   };
 
-  // Add a branch member (peer under same parent)
   const addBranchMember = (targetId: string) => {
-    const findParentId = (nodes: Node[], id: string): string | null => {
-      for (const node of nodes) {
-        if (node.children.some((child) => child.id === id)) return node.id;
-        const result = findParentId(node.children, id);
-        if (result) return result;
-      }
-      return null;
-    };
+    setTree((prevTree) => {
+      const newTree = JSON.parse(JSON.stringify(prevTree));
+      const targetNode = findNodeById(newTree, targetId);
 
-    const parentId = findParentId(tree, targetId);
-    if (!parentId) return;
+      if (!targetNode || targetNode.type !== "subordinate") return prevTree;
 
-    const parentNode = findNodeById(tree, parentId);
-    if (!parentNode) return;
+      const newBranchMember: Node = {
+        id: generateId(),
+        label: getNextBranchMemberLabel(targetNode),
+        parentId: targetNode.id,
+        type: "branch",
+        children: [],
+      };
 
-    const count = parentNode.children.length + 1;
-    const newNodeId = generateId();
-    const newLabel = buildLabelPath(tree, parentId, count);
-
-    const updateTree = (nodes: Node[]): Node[] =>
-      nodes.map((node) => {
-        if (node.id === parentId) {
-          return {
-            ...node,
-            children: [
-              ...node.children,
-              {
-                id: newNodeId,
-                label: newLabel,
-                parentId,
-                type: "branch",
-                children: [],
-              },
-            ],
-          };
-        }
-        return { ...node, children: updateTree(node.children) };
-      });
-
-    setTree(updateTree(tree));
+      targetNode.children.push(newBranchMember);
+      return newTree;
+    });
   };
 
-  // Remove any node
   const removeNode = (id: string) => {
-    const deleteNode = (nodes: Node[]): Node[] =>
-      nodes
-        .filter((node) => node.id !== id)
-        .map((node) => ({
-          ...node,
-          children: deleteNode(node.children),
-        }));
-
-    setTree(deleteNode(tree));
+    setTree((prevTree) => {
+      const deleteNode = (nodes: Node[]): Node[] => {
+        return nodes
+          .filter((node) => node.id !== id)
+          .map((node) => ({
+            ...node,
+            children: deleteNode(node.children),
+          }));
+      };
+      return deleteNode(prevTree);
+    });
   };
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold text-center mb-4">Organizational Structure</h2>
-      <div className="flex justify-center">
+      <h1 className="text-xl font-bold mb-4">Organizational Structure</h1>
+      <div className="w-full">
         {tree.map((node) => (
           <NodeComponent
             key={node.id}
@@ -200,59 +224,240 @@ const OrgChart = () => {
 
 export default OrgChart;
 
-// "use client"
 
+
+
+// const NodeComponent = ({
+//   node,
+//   onAddBranchMember,
+//   onAddSubordinate,
+//   onRemove,
+// }: {
+//   node: Node;
+//   onAddBranchMember: (id: string) => void;
+//   onAddSubordinate: (id: string) => void;
+//   onRemove: (id: string) => void;
+// }) => {
+//   return (
+//     <div className="mb-4">
+//       <div className="border">
+//       <div className="flex items-center justify-between gap-2 mb-1">
+//         <div className=" border px-3 py-1 rounded bg-gray-50">
+//           {node.label}
+
+//         <div className="flex gap-1">
+//           {node.type === "subordinate" && (
+//             <Button
+//               variant="ghost"
+//               size="sm"
+//               onClick={(e) => {
+//                 e.stopPropagation();
+//                 onAddBranchMember(node.id);
+//               }}
+//               title="Add branch member"
+//               className="h-6 w-6 p-0"
+//             >
+//               <Plus className="w-3 h-3" />
+//             </Button>
+//           )}
+
+//           {node.type !== "director" && (
+//             <Button
+//               variant="ghost"
+//               size="sm"
+//               onClick={(e) => {
+//                 e.stopPropagation();
+//                 onRemove(node.id);
+//               }}
+//               title="Remove"
+//               className="h-6 w-6 p-0"
+//             >
+//               <Minus className="w-3 h-3" />
+//             </Button>
+//           )}
+
+//           <Button
+//             variant="ghost"
+//             size="sm"
+//             onClick={(e) => {
+//               e.stopPropagation();
+//               onAddSubordinate(node.id);
+//             }}
+//             title="Add subordinate branch"
+//             className="h-6 w-6 p-0"
+//           >
+//             <MoreHorizontal className="w-3 h-3" />
+//           </Button>
+
+//         </div>
+
+//         </div>
+//       </div>
+
+//       {/* Render Children */}
+//       {node.children.length > 0 && (
+//         <div className="ml-3 border-gray-200">
+//           {node.children.map((child) => (
+//             <NodeComponent
+//               key={child.id}
+//               node={child}
+//               onAddBranchMember={onAddBranchMember}
+//               onAddSubordinate={onAddSubordinate}
+//               onRemove={onRemove}
+//             />
+//           ))}
+//         </div>
+//       )}
+//       </div>
+//     </div>
+//   );
+// };
+
+
+
+
+
+
+
+
+// "use client";
 // import React, { useState } from "react";
 // import { Button } from "@/components/ui/button";
-// import { Plus, Minus } from "lucide-react";
-
+// import { MoreHorizontal, Plus, Minus } from "lucide-react";
 // interface Node {
 //   id: string;
 //   label: string;
 //   children: Node[];
+//   parentId: string | null;
+//   type: "director" | "subordinate" | "branch";
 // }
 
 // const generateId = () => Math.random().toString(36).substring(2, 9);
 
-// const NodeComponent = ({ node, onAdd, onRemove }: { node: Node; onAdd: (id: string) => void; onRemove: (id: string) => void }) => {
+// const buildLabelPath = (
+//   nodes: Node[],
+//   parentId: string | null,
+//   index: number
+// ): string => {
+//   if (!parentId) return ""; // Director
+//   const parent = findNodeById(nodes, parentId);
+//   return parent ? `${parent.label}/${index}` : `${index}`;
+// };
+
+// const findNodeById = (nodes: Node[], id: string): Node | null => {
+//   for (const node of nodes) {
+//     if (node.id === id) return node;
+//     const found = findNodeById(node.children, id);
+//     if (found) return found;
+//   }
+//   return null;
+// };
+
+// const NodeComponent = ({
+//   node,
+//   onAddBranchMember,
+//   onAddSubordinate,
+//   onRemove,
+// }: {
+//   node: Node;
+//   onAddBranchMember: (id: string) => void;
+//   onAddSubordinate: (id: string) => void;
+//   onRemove: (id: string) => void;
+// }) => {
 //   return (
 //     <div className="border p-2 m-2 rounded bg-white shadow">
 //       <div className="flex justify-between items-center">
-//         <span>{node.label}</span>
-//         <div className="flex gap-2">
-//           <Button variant="outline" size="icon" onClick={() => onAdd(node.id)}>
-//             <Plus className="w-4 h-4 text-white bg-green-600" />
+//         <span className={node.type === "subordinate" ? "font-semibold" : ""}>
+//           {node.label}
+//         </span>
+//         <div className="flex gap-1">
+//           {node.type === "subordinate" && (
+//             <Button
+//               variant="outline"
+//               size="icon"
+//               onClick={() => onAddBranchMember(node.id)}
+//             >
+//               <Plus className="w-4 h-4 text-green-600" />
+//             </Button>
+//           )}
+
+//           <Button
+//             variant="outline"
+//             size="icon"
+//             onClick={() => onAddSubordinate(node.id)}
+//           >
+//             <MoreHorizontal className="w-4 h-4 text-gray-600" />
 //           </Button>
-//           <Button variant="outline" size="icon" onClick={() => onRemove(node.id)}>
-//             <Minus className="w-4 h-4 text-white bg-red-600" />
-//           </Button>
+//           {node.type !== "director" && (
+//             <Button
+//               variant="outline"
+//               size="icon"
+//               onClick={() => onRemove(node.id)}
+//             >
+//               <Minus className="w-4 h-4 text-red-600" />
+//             </Button>
+//           )}
 //         </div>
 //       </div>
+
+//       {/* Render Children */}
 //       <div className="ml-4 border-l border-gray-300 pl-2">
 //         {node.children.map((child) => (
-//           <NodeComponent key={child.id} node={child} onAdd={onAdd} onRemove={onRemove} />
+//           <NodeComponent
+//             key={child.id}
+//             node={child}
+//             onAddBranchMember={onAddBranchMember}
+//             onAddSubordinate={onAddSubordinate}
+//             onRemove={onRemove}
+//           />
 //         ))}
 //       </div>
 //     </div>
 //   );
 // };
 
+// const getNextLabel = (parentNode: Node): string => {
+//   const branchMembers = parentNode.children.filter(child => child.type === "branch");
+//   const nextIndex = branchMembers.length + 1;
+//   return `Branch ${nextIndex}`;
+// };
+
 // const OrgChart = () => {
-//   const [tree, setTree] = useState<Node[]>([]);
-
-//   const handleAdd = (id: string | null = null) => {
-//     const newNode: Node = {
-//       id: generateId(),
-//       label: id ? `Branch Member ${id}/${Math.floor(Math.random() * 10)}` : `Subordinate ${tree.length + 1}`,
+//   const [tree, setTree] = useState<Node[]>([
+//     {
+//       id: "director",
+//       label: "Director",
+//       parentId: null,
+//       type: "director",
 //       children: [],
-//     };
+//     },
+//   ]);
 
-//     if (!id) return setTree([...tree, newNode]);
+//   const addSubordinate = (parentId: string) => {
+//     const newNodeId = generateId();
 
 //     const updateTree = (nodes: Node[]): Node[] =>
 //       nodes.map((node) => {
-//         if (node.id === id) {
-//           return { ...node, children: [...node.children, newNode] };
+//         if (node.id === parentId) {
+//           const count = node.children.length + 1;
+//           const label = buildLabelPath(tree, parentId, count);
+
+//           return {
+//             ...node,
+//             children: [
+//               ...node.children,
+//               {
+//                 id: newNodeId,
+//                 label:
+//                   node.type === "director"
+//                     ? `Subordinate ${count}`
+//                     : `${label}`,
+//                 parentId,
+//                 type: "subordinate",
+//                 children: [],
+//               },
+//             ],
+//           };
 //         }
 //         return { ...node, children: updateTree(node.children) };
 //       });
@@ -260,23 +465,84 @@ export default OrgChart;
 //     setTree(updateTree(tree));
 //   };
 
-//   const handleRemove = (id: string) => {
-//     const removeNode = (nodes: Node[]): Node[] =>
+//   const addBranchMember = (targetId: string) => {
+//     const findParent = (
+//       nodes: Node[],
+//       targetId: string
+//     ): { parent: Node | null; parentPath: Node[] } => {
+//       for (const node of nodes) {
+//         for (const child of node.children) {
+//           if (child.id === targetId && child.type === "subordinate") {
+//             return { parent: node, parentPath: [node] };
+//           }
+//           const result = findParent(node.children, targetId);
+//           if (result.parent) {
+//             return {
+//               parent: result.parent,
+//               parentPath: [node, ...result.parentPath],
+//             };
+//           }
+//         }
+//       }
+//       return { parent: null, parentPath: [] };
+//     };
+
+//     const { parent } = findParent(tree, targetId);
+//     if (!parent) return;
+
+//     const updateTree = (nodes: Node[]): Node[] => {
+//       return nodes.map((node) => {
+//         if (node.id === parent.id) {
+//           const count = node.children.filter((c) => c.type === "branch").length;
+//           const newBranch: Node = {
+//             id: generateId(),
+//             label: getNextLabel(node),
+//             parentId: node.id,
+//             type: "branch",
+//             children: [],
+//           };
+//           return {
+//             ...node,
+//             children: [...node.children, newBranch],
+//           };
+//         }
+
+//         return {
+//           ...node,
+//           children: updateTree(node.children),
+//         };
+//       });
+//     };
+
+//     setTree(updateTree(tree));
+//   };
+
+//   const removeNode = (id: string) => {
+//     const deleteNode = (nodes: Node[]): Node[] =>
 //       nodes
 //         .filter((node) => node.id !== id)
-//         .map((node) => ({ ...node, children: removeNode(node.children) }));
-//     setTree(removeNode(tree));
+//         .map((node) => ({
+//           ...node,
+//           children: deleteNode(node.children),
+//         }));
+
+//     setTree(deleteNode(tree));
 //   };
 
 //   return (
 //     <div className="p-4">
-//       <h2 className="text-xl font-bold text-center mb-4">Organizational Structure</h2>
-//       <div className="flex justify-center mb-4">
-//         <Button onClick={() => handleAdd(null)}>Director ...</Button>
-//       </div>
-//       <div className="p-4">
+//       <h2 className="text-xl font-bold text-center mb-4">
+//         Organizational Structure
+//       </h2>
+//       <div className="flex justify-center">
 //         {tree.map((node) => (
-//           <NodeComponent key={node.id} node={node} onAdd={handleAdd} onRemove={handleRemove} />
+//           <NodeComponent
+//             key={node.id}
+//             node={node}
+//             onAddBranchMember={addBranchMember}
+//             onAddSubordinate={addSubordinate}
+//             onRemove={removeNode}
+//           />
 //         ))}
 //       </div>
 //     </div>
