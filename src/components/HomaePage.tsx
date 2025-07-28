@@ -96,7 +96,7 @@ const NodeComponent = ({
             node.type === "director"
               ? "w-[150px] mx-auto flex justify-center items-center border gap-3 p-4"
               : "w-full flex justify-between gap-2"
-          } mt-4`}
+          } my-4`}
           // className="w-full flex justify-between gap-2"
         >
           <div className="flex items-center gap-2 mb-1">
