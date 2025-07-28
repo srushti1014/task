@@ -145,7 +145,7 @@ const NodeComponent = ({
               onClick={() => setShowMenu((prev) => !prev)}
               className="ml-2 cursor-pointer"
             >
-              <MoreHorizontal className="w-3 h-3" />
+              <MoreHorizontal className="w-4 h-4" />
             </button>
             {showMenu && (
               <div
@@ -189,7 +189,7 @@ const NodeComponent = ({
           <div
             className={`${
               node.type === "director"
-                ? "grid grid-cols-2 gap-4"
+                ? "grid grid-cols-2 gap-10"
                 : "flex flex-col gap-2"
             } mt-4`}
           >
