@@ -1,6 +1,5 @@
 "use client";
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Plus, Minus } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -57,14 +56,45 @@ const NodeComponent = ({
   onRemove: (id: string) => void;
 }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<"right" | "left">("right");
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as HTMLElement)
+      ) {
+        setShowMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!showMenu || !menuButtonRef.current) return;
+
+    const rect = menuButtonRef.current.getBoundingClientRect();
+    const screenWidth = window.innerWidth;
+
+    if (screenWidth - rect.right < 200) {
+      setMenuPosition("left");
+    } else {
+      setMenuPosition("right");
+    }
+  }, [showMenu]);
+
   return (
     <div className="">
-      {/* Node Box */}
-      <div className="border px-5 py-2 w-full">
+      <div className="border px-5 py-2 w-full"
+      >
         <div
           className={`${
             node.type === "director"
-              ? "w-full flex justify-center gap-3"
+              ? "w-[150px] mx-auto flex justify-center items-center border gap-3 p-4"
               : "w-full flex justify-between gap-2"
           } mt-4`}
           // className="w-full flex justify-between gap-2"
@@ -78,7 +108,7 @@ const NodeComponent = ({
                     e.stopPropagation();
                     onAddBranchMember(node.id);
                   }}
-                  className="w-4.5 h-4.5  text-white rounded-full flex items-center justify-center bg-green-700"
+                  className="w-4.5 h-4.5 cursor-pointer text-white rounded-full flex items-center justify-center bg-green-700"
                   title="Add branch member"
                 >
                   <Plus size={13} className="font-extrabold" />
@@ -90,7 +120,7 @@ const NodeComponent = ({
                     e.stopPropagation();
                     onRemove(node.id);
                   }}
-                  className="w-4.5 h-4.5 text-white rounded-full flex items-center justify-center bg-red-700"
+                  className="w-4.5 h-4.5 cursor-pointer text-white rounded-full flex items-center justify-center bg-red-700"
                 >
                   <Minus size={13} className="font-extrabold" />
                 </button>
@@ -111,13 +141,20 @@ const NodeComponent = ({
           </Button> */}
           <div className="relative inline-block text-left">
             <button
+              ref={menuButtonRef}
               onClick={() => setShowMenu((prev) => !prev)}
-              className="ml-2"
+              className="ml-2 cursor-pointer"
             >
               <MoreHorizontal className="w-3 h-3" />
             </button>
             {showMenu && (
-              <div className="absolute left-full top-0 mt-2 w-64 p-2 bg-white border rounded shadow z-10">
+              <div
+                ref={menuRef}
+                // className="absolute left-full top-0 mt-2 w-64 bg-white border rounded shadow z-10"
+                className={`absolute top-2.5 mt-2 w-64 p-0.5 bg-white border rounded shadow z-10
+                  ${menuPosition === "right" ? "left-3" : "right-0"}
+                `}
+              >
                 <button
                   //   onClick={(e) => {
                   //     e.stopPropagation();
@@ -136,7 +173,7 @@ const NodeComponent = ({
                       onAddSubordinate(node.id);
                     }
                   }}
-                  className="text-sm"
+                  className="text-sm cursor-pointer p-2 "
                 >
                   {node.type === "branch"
                     ? "Add a sub Branch Member"
@@ -244,7 +281,9 @@ const OrgChart = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Organizational Structure</h1>
+      <h1 className="text-[42px] text-center font-bold my-7">
+        Organizational Structure
+      </h1>
       <div className="w-full">
         {tree.map((node) => (
           <NodeComponent
